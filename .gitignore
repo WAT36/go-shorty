@@ -1,0 +1,8 @@
+# Binaries
+shorty
+
+# Data
+data/*.json
+
+# OS junk
+.DS_Store
