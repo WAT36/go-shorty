@@ -57,10 +57,8 @@ func (s *FileStore) Load() error {
 	return nil
 }
 
-func (s *FileStore) Save() error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
+// 追加: ロックを取らない保存関数（呼ぶ側でロック管理）
+func (s *FileStore) saveUnsafe() error {
 	dir := filepath.Dir(s.path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -80,6 +78,14 @@ func (s *FileStore) Save() error {
 	return os.Rename(tmp, s.path)
 }
 
+// 既存の Save は外部用（読みロックを取ってから保存）
+func (s *FileStore) Save() error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.saveUnsafe()
+}
+
+// Create: 最後の保存は saveUnsafe() に置き換え
 func (s *FileStore) Create(rawURL, custom string) (string, error) {
 	if rawURL == "" {
 		return "", errors.New("url required")
@@ -94,13 +100,11 @@ func (s *FileStore) Create(rawURL, custom string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// カスタム重複チェック
 	if code != "" {
 		if _, ok := s.items[code]; ok {
 			return "", errors.New("custom code already exists")
 		}
 	} else {
-		// ランダム生成（重複しないまで）
 		for {
 			c, err := shortener.RandomCode()
 			if err != nil {
@@ -120,7 +124,9 @@ func (s *FileStore) Create(rawURL, custom string) (string, error) {
 		CreatedAt: time.Now(),
 	}
 	s.items[code] = m
-	if err := s.Save(); err != nil {
+
+	// ← ここがポイント：Lock中なので Save() ではなく saveUnsafe()
+	if err := s.saveUnsafe(); err != nil {
 		return "", fmt.Errorf("save failed: %w", err)
 	}
 	return code, nil
@@ -143,6 +149,7 @@ func (s *FileStore) List() []Mapping {
 	return out
 }
 
+// Delete: Save() → saveUnsafe() に
 func (s *FileStore) Delete(code string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -150,9 +157,10 @@ func (s *FileStore) Delete(code string) error {
 		return errors.New("not found")
 	}
 	delete(s.items, code)
-	return s.Save()
+	return s.saveUnsafe()
 }
 
+// Increment: Save() → saveUnsafe() に
 func (s *FileStore) Increment(code string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -162,5 +170,5 @@ func (s *FileStore) Increment(code string) error {
 	}
 	m.Clicks++
 	s.items[code] = m
-	return s.Save()
+	return s.saveUnsafe()
 }
