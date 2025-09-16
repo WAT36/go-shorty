@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/WAT36/shorty/internal/shortener"
+	"github.com/WAT36/go-shorty/internal/shortener"
 )
 
 type Mapping struct {

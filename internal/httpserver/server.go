@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/WAT36/shorty/internal/store"
+	"github.com/WAT36/go-shorty/internal/store"
 )
 
 type Server struct {

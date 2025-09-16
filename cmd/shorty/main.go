@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/WAT36/shorty/internal/httpserver"
-	"github.com/WAT36/shorty/internal/store"
+	"github.com/WAT36/go-shorty/internal/httpserver"
+	"github.com/WAT36/go-shorty/internal/store"
 )
 
 func main() {
